@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Bar chart Visualization Of Solar Eclipse</title>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <style>
+        body {
+            font: 10px sans-serif;
+            background-color: #ffffff;
+        }
+        .bar {
+            fill: #583058;
+            opacity: 1;
+            width: 100px;
+        }
+        .axis path
+        {
+            fill: none;
+            stroke: #000;
+            stroke-width: 2;
+        }
+        .axis line {
+            fill: none;
+            stroke: #000;
+            stroke-width: 2;
+        }
+        select {
+            display: block;
+            block-size: 30px ;
+            stroke-width: 2;
+        }
+    </style>
+
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="Main.html">Eclipse Visualization</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+            <li class="nav-item ">
+                <a class="nav-link" href="#">Solar Globe <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="lunar.html">Lunar Globe</a>
+            </li>
+            <li class="nav-item active">
+                <a class="nav-link" href="index-solar.html">Bar Chart</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="index-lunar.html">Lunar Bar Chart</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="Group_Final.html">Retrieval</a>
+            </li>
+
+
+        </ul>
+    </div>
+</nav>
+<h1 align="center"> Bar chart Visualization Of Solar Eclipse parameters</h1>
+
+<div id='Container' align="center" > <h3>Select a Eclipse from Dropdown</h3></div>
+
+
+<script>
+
+    var CSV_file = "https://raw.githubusercontent.com/KiranJoshi25/Data_viz_group_project/main/solar.csv";
+    var Csv_Fields = ["Saros_Number","Sun_Altitude","Path_Width","Sun_Azimuth"];
+    d3.csv(CSV_file, function(error, data) {
+        var Eclipse_map = {};
+        data.forEach(function(d) {
+            var solar = d.Calendar_Date;
+            Eclipse_map[solar] = [];
+            Csv_Fields.forEach(function(field) {
+                Eclipse_map[solar].push( +d[field] );
+            });
+        });
+        Visualize(Eclipse_map);
+    });
+
+    var Visualize = function(Eclipse_map) {
+        var margin = { top: 30, right: 50, bottom: 30, left: 50 },
+
+            width  = 750 - margin.left - margin.right,
+            height = 450 - margin.top  - margin.bottom;
+
+        var x_scale = d3.scale.ordinal()
+            .domain(Csv_Fields)
+            .rangeRoundBands([0, width], 0.1);
+
+        var y_scale = d3.scale.linear()
+            .range([height, 0]);
+
+        var canvas = d3.select("#Container")
+            .append("svg")
+            .attr("width",  width  + margin.left + margin.right)
+            .attr("height", height + margin.top  + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var x_axis = d3.svg.axis()
+            .scale(x_scale)
+            .orient("bottom");
+
+        canvas.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(x_axis);
+
+        var y_axis = d3.svg.axis()
+            .scale(y_scale)
+            .orient("left");
+
+        var Y_axis_update = canvas.append("g")
+            .attr("class", "y axis")
+            .call(y_axis);
+
+        Y_axis_update.append("text")
+            .attr("transform", "rotate(60)")
+            .attr("y", 10)
+            .attr("dy", "1em")
+            .style("text-anchor", "end")
+            .text("values");
+
+        var Update_visualization = function(data) {
+
+            y_scale.domain( d3.extent(data) );
+            Y_axis_update.call(y_axis);
+
+            var bars = canvas.selectAll(".bar").data(data);
+
+            bars.enter()
+                .append("rect")
+                .attr("class", "bar")
+                .attr("x", function(d,i) { return x_scale( Csv_Fields[i] ); })
+                .attr("width", x_scale.rangeBand())
+                .attr("y", function(d,i) { return y_scale(d); })
+                .attr("height", function(d,i) { return height - y_scale(d); });
+
+            bars.transition().duration(250).attr("y", function(d,i) { return y_scale(d); }).attr("height", function(d,i) { return height - y_scale(d); });
+
+            bars.exit().remove();
+        };
+
+
+        var dropdownChange = function() {
+            var New_Eclipse = d3.select(this).property('value'),
+                newData   = Eclipse_map[New_Eclipse];
+            Update_visualization(newData);
+        };
+
+        var eclipses = Object.keys(Eclipse_map).sort();
+        var select_eclipse = d3.select("#Container")
+            .insert("select", "svg")
+            .on("change", dropdownChange);
+
+        select_eclipse.selectAll("option")
+            .data(eclipses)
+            .enter().append("option")
+            .attr("value", function (d) { return d; })
+            .text(function (d) {
+                return d[0].toUpperCase() + d.slice(1,d.length);
+            });
+
+        var new_data = Eclipse_map[ eclipses[0] ];
+        Update_visualization(new_data);
+
+    };
+</script>
+
+<p style="font-size: 25px" align="center">Solar azimuth angle is defined as the angle between the projection of sun's centre onto the horizontal plane and due south direction
+    <img src="1.jpg" alt="Azimuth" width="1486" height="467" >
+</p>
+
+<h2 align="center" >To know more about saros number <a href="https://eclipse.gsfc.nasa.gov/SEsaros/SEsaros.html"> click here</a></h2>
+</body>
+</html>
+
